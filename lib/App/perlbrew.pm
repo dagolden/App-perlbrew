@@ -14,6 +14,7 @@ our $CONFIG;
 
 our $PERLBREW_ROOT = $ENV{PERLBREW_ROOT} || catdir($ENV{HOME}, "perl5", "perlbrew");
 our $PERLBREW_HOME = $ENV{PERLBREW_HOME} || catdir($ENV{HOME}, ".perlbrew");
+our $PERLBREW_LIBDIR = $ENV{PERLBREW_LIBDIR} || catdir($PERLBREW_HOME, "libs");
 
 local $SIG{__DIE__} = sub {
     my $message = shift;
@@ -40,6 +41,7 @@ sub BASHRC_CONTENT() {
     return "export PERLBREW_BASHRC_VERSION=$VERSION\n\n" . <<'RC';
 [[ -z "$PERLBREW_ROOT" ]] && export PERLBREW_ROOT="$HOME/perl5/perlbrew"
 [[ -z "$PERLBREW_HOME" ]] && export PERLBREW_HOME="$HOME/.perlbrew"
+[[ -z "$PERLBREW_LIBDIR" ]] && export PERLBREW_LIBDIR="$PERLBREW_HOME/libs"
 
 if [[ ! -n "$PERLBREW_SKIP_INIT" ]]; then
     if [[ -f "$PERLBREW_HOME/init" ]]; then
@@ -167,6 +169,10 @@ sub CSHRC_CONTENT {
 
 if ( $?PERLBREW_HOME == 0 ) then
     setenv PERLBREW_HOME "$HOME/.perlbrew"
+endif
+
+if ( $?PERLBREW_LIBDIR == 0 ) then
+    setenv PERLBREW_LIBDIR "$PERLBREW_HOME/libs"
 endif
 
 if ( $?PERLBREW_ROOT == 0 ) then
@@ -1090,7 +1096,7 @@ sub installed_perls {
 sub local_libs {
     my ($self, $perl_name) = @_;
 
-    my @libs = map { substr($_, length($PERLBREW_HOME) + 6) } <$PERLBREW_HOME/libs/*>;
+    my @libs = map { substr($_, length($PERLBREW_LIBDIR) + 1) } <$PERLBREW_LIBDIR/*>;
 
     if ($perl_name) {
         @libs = grep { /^$perl_name\@/ } @libs;
@@ -1142,13 +1148,13 @@ sub perlbrew_env {
 
             if (
                 $ENV{PERL_LOCAL_LIB_ROOT}
-                && $ENV{PERL_LOCAL_LIB_ROOT} =~ /^$PERLBREW_HOME/
+                && $ENV{PERL_LOCAL_LIB_ROOT} =~ /^$PERLBREW_LIBDIR/
             ) {
                 my %deactivate_env = local::lib->build_deact_all_environment_vars_for($ENV{PERL_LOCAL_LIB_ROOT});
                 @env{keys %deactivate_env} = values %deactivate_env;
             }
 
-            my $base = "$PERLBREW_HOME/libs/${perl_name}\@${lib_name}";
+            my $base = "$PERLBREW_LIBDIR/${perl_name}\@${lib_name}";
 
             if (-d $base) {
                 delete $ENV{PERL_LOCAL_LIB_ROOT};
@@ -1668,7 +1674,7 @@ sub run_command_lib_create {
     }
 
     my $fullname = $perl_name . '@' . $lib_name;
-    my $dir = catdir($PERLBREW_HOME,  "libs", $fullname);
+    my $dir = catdir($PERLBREW_LIBDIR, $fullname);
 
     if (-d $dir) {
         die "$fullname is already there.\n";
@@ -1696,7 +1702,7 @@ sub run_command_lib_delete {
 
     my $current  = $self->current_perl . '@' . ($self->env("PERLBREW_LIB") || "");
 
-    my $dir = catdir($PERLBREW_HOME,  "libs", $fullname);
+    my $dir = catdir($PERLBREW_LIBDIR, $fullname);
 
     if (-d $dir) {
 
@@ -1724,7 +1730,7 @@ sub run_command_lib_list {
         $current = $self->current_perl . "@" . $self->env("PERLBREW_LIB");
     }
 
-    my $dir = catdir($PERLBREW_HOME,  "libs");
+    my $dir = $PERLBREW_LIBDIR;
     return unless -d $dir;
 
     opendir my $dh, $dir or die "open $dir failed: $!";
